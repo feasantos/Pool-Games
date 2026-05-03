@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../shared/difficulty.dart';
 import 'tic_tac_toe_game.dart';
@@ -14,9 +15,67 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
   bool _is1Player = true;
   Difficulty _difficulty = Difficulty.pierrote;
   TicTacToeGame? _game;
+  int _kbCell = 4; // célula com foco do teclado (0-8), começa no centro
+
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    super.dispose();
+  }
+
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    final key = event.logicalKey;
+
+    // Teclas 1-9: jogar diretamente na célula (linha-a-linha, 1=topo-esq, 9=baixo-dir)
+    final pairs = [
+      [LogicalKeyboardKey.digit1, LogicalKeyboardKey.numpad1],
+      [LogicalKeyboardKey.digit2, LogicalKeyboardKey.numpad2],
+      [LogicalKeyboardKey.digit3, LogicalKeyboardKey.numpad3],
+      [LogicalKeyboardKey.digit4, LogicalKeyboardKey.numpad4],
+      [LogicalKeyboardKey.digit5, LogicalKeyboardKey.numpad5],
+      [LogicalKeyboardKey.digit6, LogicalKeyboardKey.numpad6],
+      [LogicalKeyboardKey.digit7, LogicalKeyboardKey.numpad7],
+      [LogicalKeyboardKey.digit8, LogicalKeyboardKey.numpad8],
+      [LogicalKeyboardKey.digit9, LogicalKeyboardKey.numpad9],
+    ];
+    for (int i = 0; i < 9; i++) {
+      if (key == pairs[i][0] || key == pairs[i][1]) {
+        setState(() => _kbCell = i);
+        if (_game != null) _handleTap(i);
+        return true;
+      }
+    }
+
+    // Setas: navegar o foco
+    if (key == LogicalKeyboardKey.arrowLeft && _kbCell % 3 > 0) {
+      setState(() => _kbCell--); return true;
+    }
+    if (key == LogicalKeyboardKey.arrowRight && _kbCell % 3 < 2) {
+      setState(() => _kbCell++); return true;
+    }
+    if (key == LogicalKeyboardKey.arrowUp && _kbCell >= 3) {
+      setState(() => _kbCell -= 3); return true;
+    }
+    if (key == LogicalKeyboardKey.arrowDown && _kbCell < 6) {
+      setState(() => _kbCell += 3); return true;
+    }
+    if ((key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) &&
+        _game != null) {
+      _handleTap(_kbCell); return true;
+    }
+    return false;
+  }
 
   void _startGame() {
     setState(() {
+      _kbCell = 4;
       _game = TicTacToeGame(
         vsAi: _is1Player,
         difficulty: _difficulty,
@@ -42,7 +101,7 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
     }
   }
 
-  void _reset() => setState(() => _game!.reset());
+  void _reset() => setState(() { _game!.reset(); _kbCell = 4; });
 
   void _backToMenu() => setState(() => _game = null);
 
@@ -159,6 +218,15 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
           label: const Text('Reiniciar',
               style: TextStyle(color: AppTheme.accent, fontSize: 16)),
         ),
+        Text(
+          '1–9 jogar direto  •  ← ↑ → ↓ navegar  •  Enter confirmar',
+          style: TextStyle(
+            fontSize: 11,
+            color: AppTheme.textLight.withValues(alpha: 0.32),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
       ],
     );
   }
@@ -217,6 +285,7 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
             return _Cell(
               player: game.board[index],
               isWinning: isWinning,
+              isKeyboardFocused: index == _kbCell,
               onTap: () => _handleTap(index),
             );
           },
@@ -304,10 +373,15 @@ class _Chip extends StatelessWidget {
 class _Cell extends StatefulWidget {
   final Player? player;
   final bool isWinning;
+  final bool isKeyboardFocused;
   final VoidCallback onTap;
 
-  const _Cell(
-      {required this.player, required this.isWinning, required this.onTap});
+  const _Cell({
+    required this.player,
+    required this.isWinning,
+    required this.isKeyboardFocused,
+    required this.onTap,
+  });
 
   @override
   State<_Cell> createState() => _CellState();
@@ -343,7 +417,17 @@ class _CellState extends State<_Cell> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     final bg = widget.isWinning
         ? AppTheme.primary.withValues(alpha: 0.5)
-        : AppTheme.surface;
+        : widget.isKeyboardFocused
+            ? Colors.white.withValues(alpha: 0.08)
+            : AppTheme.surface;
+
+    final borderColor = widget.isWinning
+        ? AppTheme.accent
+        : widget.isKeyboardFocused
+            ? Colors.white70
+            : AppTheme.primary;
+
+    final borderWidth = (widget.isWinning || widget.isKeyboardFocused) ? 2.5 : 1.5;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -352,10 +436,7 @@ class _CellState extends State<_Cell> with SingleTickerProviderStateMixin {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: widget.isWinning ? AppTheme.accent : AppTheme.primary,
-            width: widget.isWinning ? 2.5 : 1.5,
-          ),
+          border: Border.all(color: borderColor, width: borderWidth),
         ),
         child: widget.player == null
             ? null

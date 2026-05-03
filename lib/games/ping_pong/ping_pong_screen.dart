@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../shared/difficulty.dart';
 import 'ping_pong_game.dart';
@@ -16,21 +17,52 @@ class _PingPongScreenState extends State<PingPongScreen>
   final _game = PingPongGame();
   late Ticker _ticker;
   bool _initialized = false;
+  final _pressedKeys = <LogicalKeyboardKey>{};
 
   @override
   void initState() {
     super.initState();
     _ticker = createTicker(_onTick)..start();
+    HardwareKeyboard.instance.addHandler(_onKey);
   }
 
   void _onTick(Duration _) {
     if (!_initialized || _game.status != PingPongStatus.playing) return;
+    _applyKeyboard();
     _game.update();
     setState(() {});
   }
 
+  void _applyKeyboard() {
+    const speed = 12.0;
+    if (_pressedKeys.contains(LogicalKeyboardKey.arrowLeft)) {
+      _game.setP1Paddle(_game.p1X + _game.paddleW / 2 - speed);
+    }
+    if (_pressedKeys.contains(LogicalKeyboardKey.arrowRight)) {
+      _game.setP1Paddle(_game.p1X + _game.paddleW / 2 + speed);
+    }
+    if (_game.twoPlayer) {
+      if (_pressedKeys.contains(LogicalKeyboardKey.keyA)) {
+        _game.setP2Paddle(_game.p2X + _game.paddleW / 2 - speed);
+      }
+      if (_pressedKeys.contains(LogicalKeyboardKey.keyD)) {
+        _game.setP2Paddle(_game.p2X + _game.paddleW / 2 + speed);
+      }
+    }
+  }
+
+  bool _onKey(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      _pressedKeys.add(event.logicalKey);
+    } else if (event is KeyUpEvent) {
+      _pressedKeys.remove(event.logicalKey);
+    }
+    return false;
+  }
+
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
     _ticker.dispose();
     super.dispose();
   }

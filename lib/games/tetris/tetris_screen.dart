@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../shared/difficulty.dart';
 import 'tetris_game.dart';
@@ -37,6 +38,7 @@ class _TetrisScreenState extends State<TetrisScreen>
     super.initState();
     _game.init();
     _ticker = createTicker(_onTick)..start();
+    HardwareKeyboard.instance.addHandler(_onKey);
   }
 
   void _onTick(Duration _) {
@@ -62,6 +64,7 @@ class _TetrisScreenState extends State<TetrisScreen>
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
     _ticker.dispose();
     super.dispose();
   }
@@ -116,6 +119,28 @@ class _TetrisScreenState extends State<TetrisScreen>
   void _dasStop() {
     _dasDir = 0;
     _dasFrame = 0;
+  }
+
+  // ── Teclado ─────────────────────────────────────────────────────
+
+  bool _onKey(KeyEvent event) {
+    if (_game.status != TetrisStatus.playing) return false;
+    final key = event.logicalKey;
+    if (event is KeyDownEvent) {
+      if (key == LogicalKeyboardKey.arrowLeft)  { _dasStart(-1); return true; }
+      if (key == LogicalKeyboardKey.arrowRight) { _dasStart(1);  return true; }
+      if (key == LogicalKeyboardKey.arrowDown)  { _game.setSoftDrop(true); return true; }
+      if (key == LogicalKeyboardKey.arrowUp || key == LogicalKeyboardKey.keyZ) {
+        setState(() => _game.rotate()); return true;
+      }
+      if (key == LogicalKeyboardKey.space) { setState(() => _game.hardDrop()); return true; }
+    } else if (event is KeyUpEvent) {
+      if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight) {
+        _dasStop(); return true;
+      }
+      if (key == LogicalKeyboardKey.arrowDown) { _game.setSoftDrop(false); return true; }
+    }
+    return false;
   }
 
   // ── Build ───────────────────────────────────────────────────────
@@ -372,6 +397,8 @@ class _TetrisScreenState extends State<TetrisScreen>
           _InfoTile(label: 'NÍVEL', value: '${_game.level}'),
           const SizedBox(height: 16),
           _InfoTile(label: 'LINHAS', value: '${_game.linesCleared}'),
+          const Spacer(),
+          _KeyHints(lines: const ['↑/Z Girar', '← →  Mover', '↓   Suave', 'Spc  Drop']),
         ],
       ),
     );
@@ -565,6 +592,36 @@ class _BoardPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _BoardPainter _) => true;
+}
+
+class _KeyHints extends StatelessWidget {
+  final List<String> lines;
+  const _KeyHints({required this.lines});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          'TECLADO',
+          style: TextStyle(
+            fontSize: 9,
+            color: AppTheme.textLight.withValues(alpha: 0.38),
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 3),
+        ...lines.map((l) => Text(
+              l,
+              style: TextStyle(
+                fontSize: 9,
+                color: AppTheme.textLight.withValues(alpha: 0.35),
+                height: 1.6,
+              ),
+            )),
+      ],
+    );
+  }
 }
 
 Color _difficultyColor(Difficulty d) => switch (d) {
