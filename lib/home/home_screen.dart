@@ -6,6 +6,7 @@ import '../games/solitaire/solitaire_screen.dart';
 import '../games/truco/truco_screen.dart';
 import '../games/tranca/tranca_screen.dart';
 import '../games/ping_pong/ping_pong_screen.dart';
+import '../games/tetris/tetris_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -41,6 +42,12 @@ class HomeScreen extends StatelessWidget {
       icon: Icons.sports_tennis,
       route: 'pingpong',
     ),
+    (
+      title: 'Tetris',
+      description: 'Clássico de blocos\n1 jogador',
+      icon: Icons.grid_on,
+      route: 'tetris',
+    ),
   ];
 
   void _navigate(BuildContext context, String route) {
@@ -50,6 +57,7 @@ class HomeScreen extends StatelessWidget {
       'truco': const TrucoScreen(),
       'tranca': const TrancaScreen(),
       'pingpong': const PingPongScreen(),
+      'tetris': const TetrisScreen(),
     };
     Navigator.push(
       context,
