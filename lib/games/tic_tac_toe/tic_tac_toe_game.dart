@@ -1,37 +1,52 @@
+import 'dart:math';
+import '../../shared/difficulty.dart';
+
 enum Player { x, o }
 
 enum GameStatus { playing, xWins, oWins, draw }
 
 class TicTacToeGame {
   final bool vsAi;
+  final Difficulty difficulty;
+  final _rng = Random();
 
   List<Player?> board = List.filled(9, null);
   Player currentPlayer = Player.x;
   GameStatus status = GameStatus.playing;
   List<int> winningCells = [];
 
-  TicTacToeGame({required this.vsAi});
+  TicTacToeGame({required this.vsAi, this.difficulty = Difficulty.feliposo});
 
   static const _winCombos = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8], // linhas
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // colunas
-    [0, 4, 8], [2, 4, 6],             // diagonais
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6],
   ];
 
   bool tap(int index) {
     if (board[index] != null || status != GameStatus.playing) return false;
-
     board[index] = currentPlayer;
     _checkStatus();
-
     if (status == GameStatus.playing) {
       currentPlayer = currentPlayer == Player.x ? Player.o : Player.x;
     }
     return true;
   }
 
-  // Retorna o índice que a IA deve jogar
-  int get aiMove => _minimax(List.from(board), Player.o, 0).index;
+  int get aiMove {
+    final empty = [for (int i = 0; i < 9; i++) if (board[i] == null) i];
+    final randomMove = empty[_rng.nextInt(empty.length)];
+    final perfectMove = _minimax(List.from(board), Player.o, 0).index;
+
+    return switch (difficulty) {
+      Difficulty.sabricinha => randomMove,
+      Difficulty.alicinha =>
+        _rng.nextDouble() < 0.6 ? randomMove : perfectMove,
+      Difficulty.pierrote =>
+        _rng.nextDouble() < 0.15 ? randomMove : perfectMove,
+      Difficulty.feliposo => perfectMove,
+    };
+  }
 
   void _checkStatus() {
     for (final combo in _winCombos) {
@@ -42,9 +57,7 @@ class TicTacToeGame {
         return;
       }
     }
-    if (board.every((cell) => cell != null)) {
-      status = GameStatus.draw;
-    }
+    if (board.every((cell) => cell != null)) status = GameStatus.draw;
   }
 
   _MinimaxResult _minimax(List<Player?> b, Player player, int depth) {
@@ -57,7 +70,8 @@ class TicTacToeGame {
     for (int i = 0; i < 9; i++) {
       if (b[i] != null) continue;
       final next = List<Player?>.from(b)..[i] = player;
-      final result = _minimax(next, player == Player.o ? Player.x : Player.o, depth + 1);
+      final result = _minimax(
+          next, player == Player.o ? Player.x : Player.o, depth + 1);
       moves.add(_MinimaxResult(i, result.score));
     }
 

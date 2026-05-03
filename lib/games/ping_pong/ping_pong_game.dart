@@ -1,4 +1,5 @@
 import 'dart:math';
+import '../../shared/difficulty.dart';
 
 enum PingPongStatus { idle, playing, p1Wins, p2Wins }
 
@@ -11,7 +12,6 @@ class PingPongGame {
   static const double initSpeed = 5.0;
   static const double speedStep = 0.25;
   static const double maxSpeed = 9.5;
-  static const double aiMaxSpeed = 4.2;
 
   final _rng = Random();
 
@@ -28,6 +28,7 @@ class PingPongGame {
   int p2Score = 0;
   PingPongStatus status = PingPongStatus.idle;
   bool twoPlayer = false;
+  Difficulty difficulty = Difficulty.pierrote;
 
   double get paddleW => width * paddleWRatio;
   double get p2Top => paddleMargin;
@@ -107,17 +108,37 @@ class PingPongGame {
     final a = t * 60 * pi / 180;
     ballSpeed = (ballSpeed + speedStep).clamp(initSpeed, maxSpeed);
     ballDx = sin(a) * ballSpeed;
-    ballDy = isBottom
-        ? -cos(a).abs() * ballSpeed
-        : cos(a).abs() * ballSpeed;
+    ballDy =
+        isBottom ? -cos(a).abs() * ballSpeed : cos(a).abs() * ballSpeed;
   }
 
+  // Parâmetros da AI por dificuldade:
+  // speed     → px/frame que a raquete se move
+  // noise     → desvio aleatório do ponto de mira (px)
+  // reaction  → fração da tela a partir do topo; AI só rastreia quando ballY < height*reaction
   void _moveAI() {
-    final target = ballX - paddleW / 2;
+    final (speed, noise, reaction) = switch (difficulty) {
+      Difficulty.sabricinha => (1.5, 65.0, 0.22),
+      Difficulty.alicinha => (3.0, 32.0, 0.42),
+      Difficulty.pierrote => (5.5, 8.0, 0.68),
+      Difficulty.feliposo => (100.0, 0.0, 1.0),
+    };
+
+    // Ball must be moving toward AI and inside reaction zone
+    if (ballDy > 0 || ballY > height * reaction) {
+      // Deriva lentamente ao centro quando bola está longe
+      final center = (width - paddleW) / 2;
+      final diff = center - p2X;
+      if (diff.abs() > 1.0) p2X += diff > 0 ? 1.0 : -1.0;
+      return;
+    }
+
+    final offset = noise > 0 ? _rng.nextDouble() * noise * 2 - noise : 0.0;
+    final target = (ballX - paddleW / 2 + offset).clamp(0.0, width - paddleW);
     final diff = target - p2X;
-    p2X = (diff.abs() <= aiMaxSpeed
+    p2X = (diff.abs() <= speed
             ? target
-            : p2X + (diff > 0 ? aiMaxSpeed : -aiMaxSpeed))
+            : p2X + (diff > 0 ? speed : -speed))
         .clamp(0, width - paddleW);
   }
 
