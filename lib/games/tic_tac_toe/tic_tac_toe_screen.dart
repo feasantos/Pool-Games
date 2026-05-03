@@ -92,6 +92,7 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
   Widget _buildGame() {
     final game = _game!;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const SizedBox(height: 24),
         _buildStatus(game),
@@ -141,10 +142,11 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
 
   Widget _buildBoard(TicTacToeGame game) {
     final size = MediaQuery.of(context).size.width * 0.85;
-    return SizedBox(
-      width: size,
-      height: size,
-      child: GridView.builder(
+    return Center(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: GridView.builder(
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
@@ -161,6 +163,7 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
           );
         },
       ),
+    ),
     );
   }
 }

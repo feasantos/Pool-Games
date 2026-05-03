@@ -5,6 +5,7 @@ import '../games/tic_tac_toe/tic_tac_toe_screen.dart';
 import '../games/solitaire/solitaire_screen.dart';
 import '../games/truco/truco_screen.dart';
 import '../games/tranca/tranca_screen.dart';
+import '../games/ping_pong/ping_pong_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -34,6 +35,12 @@ class HomeScreen extends StatelessWidget {
       icon: Icons.layers,
       route: 'tranca',
     ),
+    (
+      title: 'Ping Pong',
+      description: 'Pong clássico\n1 ou 2 jogadores',
+      icon: Icons.sports_tennis,
+      route: 'pingpong',
+    ),
   ];
 
   void _navigate(BuildContext context, String route) {
@@ -42,6 +49,7 @@ class HomeScreen extends StatelessWidget {
       'solitaire': const SolitaireScreen(),
       'truco': const TrucoScreen(),
       'tranca': const TrancaScreen(),
+      'pingpong': const PingPongScreen(),
     };
     Navigator.push(
       context,
